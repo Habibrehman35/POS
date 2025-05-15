@@ -37,12 +37,14 @@ $products = $pdo->query("SELECT * FROM products ORDER BY name")->fetchAll();
 </head>
 <body class="p-4">
 
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h3>📦 Product Management</h3>
-        <a href="add_product.php" class="btn btn-success">
-            ➕ Add Product
-        </a>
+ <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3>📦 Product Management</h3>
+    <div>
+        <a href="dashboard.php" class="btn btn-outline-secondary me-2">← Back to Dashboard</a>
+        <a href="add_product.php" class="btn btn-success">➕ Add Product</a>
     </div>
+</div>
+
 
     <?php if (count($products)): ?>
         <table class="table table-bordered table-striped">
@@ -93,7 +95,7 @@ $products = $pdo->query("SELECT * FROM products ORDER BY name")->fetchAll();
         <div class="alert alert-info">No products added yet.</div>
     <?php endif; ?>
 
-    <a href="dashboard.php" class="btn btn-outline-secondary mt-4">← Back to Dashboard</a>
+   
 
 </body>
 </html>

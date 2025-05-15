@@ -35,18 +35,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background: #f7f9fc;
+            background: #f1f5f9;
         }
         .container {
-            max-width: 700px;
-            margin-top: 50px;
+            max-width: 720px;
+            margin-top: 60px;
         }
         .card {
-            border-radius: 8px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.05);
         }
         h3 {
-            font-weight: bold;
+            font-weight: 700;
+        }
+        .form-label {
+            font-weight: 500;
         }
     </style>
 </head>
@@ -54,45 +58,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <div class="container">
     <div class="card p-4">
-        <h3 class="mb-4 text-primary">➕ Add New Supplier</h3>
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="text-primary mb-0">➕ Add New Supplier</h3>
+            <a href="suppliers.php" class="btn btn-outline-secondary">← Back</a>
+        </div>
 
         <?php if ($success): ?>
-            <div class="alert alert-success"><?= $success ?></div>
+            <div class="alert alert-success shadow-sm"><?= $success ?></div>
         <?php elseif ($error): ?>
-            <div class="alert alert-danger"><?= $error ?></div>
+            <div class="alert alert-danger shadow-sm"><?= $error ?></div>
         <?php endif; ?>
 
         <form method="POST" novalidate>
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label for="name" class="form-label">Company Name <span class="text-danger">*</span></label>
-                    <input type="text" name="name" id="name" class="form-control" required>
+                    <label for="name" class="form-label">🏢 Company Name <span class="text-danger">*</span></label>
+                    <input type="text" name="name" id="name" class="form-control" required placeholder="e.g., ABC Supplies Ltd.">
                 </div>
 
                 <div class="col-md-6">
-                    <label for="contact_person" class="form-label">Contact Person</label>
-                    <input type="text" name="contact_person" id="contact_person" class="form-control">
+                    <label for="contact_person" class="form-label">👤 Contact Person</label>
+                    <input type="text" name="contact_person" id="contact_person" class="form-control" placeholder="e.g., John Doe">
                 </div>
 
                 <div class="col-md-6">
-                    <label for="phone" class="form-label">Phone Number</label>
-                    <input type="text" name="phone" id="phone" class="form-control">
+                    <label for="phone" class="form-label">📞 Phone Number</label>
+                    <input type="text" name="phone" id="phone" class="form-control" placeholder="e.g., +123456789">
                 </div>
 
                 <div class="col-md-6">
-                    <label for="email" class="form-label">Email Address</label>
-                    <input type="email" name="email" id="email" class="form-control">
+                    <label for="email" class="form-label">📧 Email Address</label>
+                    <input type="email" name="email" id="email" class="form-control" placeholder="e.g., info@abc.com">
                 </div>
 
                 <div class="col-12">
-                    <label for="address" class="form-label">Address</label>
-                    <textarea name="address" id="address" class="form-control" rows="2"></textarea>
+                    <label for="address" class="form-label">📍 Address</label>
+                    <textarea name="address" id="address" class="form-control" rows="2" placeholder="e.g., Street #, City, ZIP"></textarea>
                 </div>
             </div>
 
-            <div class="mt-4 d-flex justify-content-between">
+            <div class="mt-4 d-flex justify-content-start gap-3">
                 <button type="submit" class="btn btn-primary px-4">💾 Save Supplier</button>
-                <a href="suppliers.php" class="btn btn-outline-secondary">← Back to Suppliers</a>
+                <a href="suppliers.php" class="btn btn-outline-secondary">Cancel</a>
             </div>
         </form>
     </div>

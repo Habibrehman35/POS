@@ -91,7 +91,11 @@ $returns = $stmt->fetchAll();
 </head>
 <body class="p-4">
 <div class="container bg-white p-4 rounded shadow-sm">
-    <h3 class="mb-4">📦 Product Return History</h3>
+   <div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="mb-0">📦 Product Return History</h3>
+    <a href="dashboard.php" class="btn btn-outline-dark">← Back</a>
+</div>
+
 
     <?php if ($success): ?><div class="alert alert-success"><?= $success ?></div><?php endif; ?>
     <?php if ($error): ?><div class="alert alert-danger"><?= $error ?></div><?php endif; ?>
@@ -162,7 +166,7 @@ $returns = $stmt->fetchAll();
         </table>
     </div>
 
-    <a href="dashboard.php" class="btn btn-outline-dark mt-4">← Back</a>
+    
 </div>
 </body>
 </html>

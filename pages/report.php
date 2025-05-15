@@ -31,7 +31,11 @@ $sales = $stmt->fetchAll();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="p-4">
+   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>📊 Sales Report</h3>
+    <a href="dashboard.php" class="btn btn-outline-secondary">← Back to Dashboard</a>
+</div>
+
 
     <!-- Filter by date -->
     <form method="GET" class="row g-3 mb-4">
