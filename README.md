@@ -60,4 +60,4 @@ This is a full-featured POS (Point of Sale) system built with **PHP**, **MySQL**
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-username/your-repo-name.git
+   https://github.com/Habibrehman35/POS.git
