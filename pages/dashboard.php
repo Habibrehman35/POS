@@ -163,6 +163,26 @@ $total_invoices = $salesData['count'] ?: 0;
 .form-check-label {
     font-size: 13px;
 }
+.footer {
+    background-color: #f8f9fa;
+    border-top: 1px solid #dee2e6;
+    position: relative;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+body.dark-mode .footer {
+    background-color: #343a40;
+    border-top: 1px solid #495057;
+    color: #ced4da;
+}
+
+body.dark-mode .footer a {
+    color: #adb5bd;
+}
 
     </style>
 </head>
@@ -191,7 +211,7 @@ $total_invoices = $salesData['count'] ?: 0;
     </div>
 </div>
 
-    <div class="mb-2">
+ <div class="mb-2">
     <a class="text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#productMenu">
         <span><i class="bi bi-box-seam"></i> Products</span>
         <i class="bi bi-caret-down-fill"></i>
@@ -203,6 +223,7 @@ $total_invoices = $salesData['count'] ?: 0;
         <a href="return_received.php" class="text-white d-block mb-2"><i class="bi bi-box-arrow-in-down-left"></i> Return Received</a>
     </div>
 </div>
+
 
         <a href="customers.php"><i class="bi bi-people"></i> Customers</a>
         <div class="mb-2">
@@ -216,8 +237,35 @@ $total_invoices = $salesData['count'] ?: 0;
                 <a href="supplier_payments.php" class="text-white d-block mb-2"><i class="bi bi-cash-coin"></i> Supplier Payments</a>
             </div>
         </div>
-        <a href="report.php"><i class="bi bi-graph-up"></i> Reports</a>
-        <a href="logout.php" class="text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+        <!-- User Management -->
+<div class="mb-2">
+    <a class="text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#userMenu">
+        <span><i class="bi bi-person-gear"></i> User Management</span>
+        <i class="bi bi-caret-down-fill"></i>
+    </a>
+    <div class="collapse ps-3 pt-2" id="userMenu">
+        <a href="add_user.php" class="text-white d-block mb-2"><i class="bi  bi-card-list"></i> Add User</a>
+        <a href="users.php" class="text-white d-block mb-2"><i class="bi bi-people-fill"></i> User List</a>
+    </div>
+</div>
+
+
+<div class="mb-2">
+  <a class="text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#reportMenu">
+        
+  <span><i class="bi bi-graph-up"></i> Report</span>
+
+        <i class="bi bi-caret-down-fill"></i>
+            </a>
+              <div class="collapse ps-3 pt-2" id="reportMenu">
+        <a href="expiry_report.php" class="text-white d-block mb-2"><i class="bi bi-item-plus"></i> Expired Items</a>
+        <a href="users.php" class="text-white d-block mb-2"><i class="bi bi-people-fill"></i> User List</a>
+    </div>
+  
+  </div>     
+  
+  
+        <!--  <a href="logout.php" class="text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a> -->
     </div>
 
     <div class="container-fluid p-4">
@@ -367,4 +415,9 @@ $total_invoices = $salesData['count'] ?: 0;
     }
 </script>
 </body>
+<footer class="footer mt-5 text-center text-muted small py-3">
+    <p class="mb-1">© <?= date('Y') ?> <strong>3Partners Company</strong>. All rights reserved.</p>
+   
+</footer>
+
 </html>

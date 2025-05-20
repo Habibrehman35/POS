@@ -26,6 +26,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $name = $_POST['name'];
     $barcode = $_POST['barcode'];
     $price = $_POST['price'];
+    $cost_price = $_POST['cost_price'];
+
     $quantity = $_POST['quantity'];
     $tax = $_POST['tax_percent'];
     $discount = $_POST['discount_percent'];
@@ -43,10 +45,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     // Update DB
-    $stmt = $pdo->prepare("UPDATE products SET name=?, barcode=?, price=?, quantity=?, tax_percent=?, discount_percent=?, expiry_date=?, image=?, supplier_name=?, supplier_address=?, supplier_contact=? WHERE id=?");
-    $stmt->execute([
-        $name, $barcode, $price, $quantity, $tax, $discount, $expiry, $image, $supplier, $address, $contact, $id
-    ]);
+    $stmt = $pdo->prepare("UPDATE products SET name=?, barcode=?, price=?, cost_price=?, quantity=?, tax_percent=?, discount_percent=?, expiry_date=?, image=?, supplier_name=?, supplier_address=?, supplier_contact=? WHERE id=?");
+   
+   
+  $stmt->execute([
+    $name, $barcode, $price, $cost_price, $quantity, $tax, $discount, $expiry, $image, $supplier, $address, $contact, $id
+]);
+
 
     header("Location: products.php");
     exit;
@@ -86,6 +91,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <label class="form-label fw-semibold">💰 Price</label>
                     <input type="number" name="price" step="0.01" value="<?= $product['price'] ?>" class="form-control" required>
                 </div>
+
+<div class="col-md-4">
+    <label class="form-label fw-semibold">🛒 Cost Price</label>
+    <input type="number" name="cost_price" step="0.01" value="<?= $product['cost_price'] ?>" class="form-control" required>
+</div>
+
+
 
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">📦 Quantity</label>

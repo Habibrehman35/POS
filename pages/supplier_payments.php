@@ -1,6 +1,7 @@
 <?php
-require '../config.php';
+// File: supplier_payments.php
 session_start();
+require '../config.php';
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
@@ -10,7 +11,6 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 $suppliers = $pdo->query("SELECT id, name FROM suppliers ORDER BY name")->fetchAll();
 $supplier_id = $_GET['supplier_id'] ?? null;
 
-// Handle Mark as Paid
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_paid'])) {
     $purchase_id = $_POST['purchase_id'];
     $stmt = $pdo->prepare("UPDATE products SET is_paid = 1, paid_at = NOW() WHERE id = ?");
@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_paid'])) {
 
 $pending = $paid = [];
 $pending_total = $paid_total = 0;
+
 if ($supplier_id) {
     $stmt = $pdo->prepare("SELECT * FROM products WHERE supplier_id = ? AND is_paid = 0 ORDER BY created_at DESC");
     $stmt->execute([$supplier_id]);
@@ -30,15 +31,18 @@ if ($supplier_id) {
     $stmt->execute([$supplier_id]);
     $paid = $stmt->fetchAll();
 
-    // Calculate outstanding
     foreach ($pending as $p) {
-        $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $p['quantity'];
-        $pending_total += $p['price'] * $p['quantity'] - $discount;
+        $qty = $p['payment_due_quantity'] ?? $p['quantity'];
+
+        $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $qty;
+        $pending_total += $p['price'] * $qty - $discount;
     }
 
     foreach ($paid as $p) {
-        $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $p['quantity'];
-        $paid_total += $p['price'] * $p['quantity'] - $discount;
+        $qty = $p['payment_due_quantity'] ?? $p['quantity'];
+
+        $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $qty;
+        $paid_total += $p['price'] * $qty - $discount;
     }
 }
 ?>
@@ -48,24 +52,11 @@ if ($supplier_id) {
     <title>Supplier Payments</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body {
-            background-color: #f5f8fa;
-        }
-        .card {
-            border: none;
-            border-radius: 12px;
-            box-shadow: 0 6px 12px rgba(0,0,0,0.05);
-        }
-        h3, h5 {
-            font-weight: 600;
-        }
-        .summary-box {
-            padding: 15px 25px;
-            border-radius: 10px;
-        }
-        .table th, .table td {
-            vertical-align: middle !important;
-        }
+        body { background-color: #f5f8fa; }
+        .card { border: none; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.05); }
+        h3, h5 { font-weight: 600; }
+        .summary-box { padding: 15px 25px; border-radius: 10px; }
+        .table th, .table td { vertical-align: middle !important; }
     </style>
 </head>
 <body class="p-4">
@@ -76,7 +67,7 @@ if ($supplier_id) {
             <a href="dashboard.php" class="btn btn-outline-secondary">← Back</a>
         </div>
 
-        <!-- Select Supplier -->
+        <!-- Supplier Dropdown -->
         <form method="GET" class="mb-4">
             <select name="supplier_id" class="form-select shadow-sm" onchange="this.form.submit()" required>
                 <option value="">-- Select Supplier --</option>
@@ -89,16 +80,16 @@ if ($supplier_id) {
         </form>
 
         <?php if ($supplier_id): ?>
-            <!-- Summary -->
+            <!-- Summary Boxes -->
             <div class="row g-3 mb-4">
                 <div class="col-md-4">
-                    <div class="bg-light summary-box border-start border-primary border-4 shadow-sm">
+                    <div class="bg-light summary-box border-start border-success border-4 shadow-sm">
                         <h6 class="text-muted mb-1">Total Paid</h6>
                         <h5 class="text-success">₨<?= number_format($paid_total, 2) ?></h5>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="bg-light summary-box border-start border-warning border-4 shadow-sm">
+                    <div class="bg-light summary-box border-start border-danger border-4 shadow-sm">
                         <h6 class="text-muted mb-1">Pending Payment</h6>
                         <h5 class="text-danger">₨<?= number_format($pending_total, 2) ?></h5>
                     </div>
@@ -111,7 +102,7 @@ if ($supplier_id) {
                 </div>
             </div>
 
-            <!-- Pending Payments -->
+            <!-- Pending Payments Table -->
             <h5 class="text-danger mb-3">📌 Pending Bills</h5>
             <?php if (count($pending)): ?>
                 <div class="table-responsive">
@@ -124,14 +115,16 @@ if ($supplier_id) {
                         </thead>
                         <tbody>
                         <?php foreach ($pending as $i => $p):
-                            $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $p['quantity'];
-                            $total = $p['price'] * $p['quantity'] - $discount;
+                            $qty = $p['payment_due_quantity'] ?? $p['quantity'];
+
+                            $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $qty;
+                            $total = $p['price'] * $qty - $discount;
                             ?>
                             <tr>
                                 <td><?= $i + 1 ?></td>
                                 <td><?= htmlspecialchars($p['name']) ?></td>
                                 <td><?= $p['barcode'] ?></td>
-                                <td><?= $p['quantity'] ?></td>
+                                <td><?= $qty ?></td>
                                 <td>₨<?= number_format($p['price'], 2) ?></td>
                                 <td><?= $p['discount_percent'] ?? 0 ?>%</td>
                                 <td><strong>₨<?= number_format($total, 2) ?></strong></td>
@@ -151,7 +144,7 @@ if ($supplier_id) {
                 <div class="alert alert-success">✅ No pending payments.</div>
             <?php endif; ?>
 
-            <!-- Paid History -->
+            <!-- Paid History Table -->
             <h5 class="text-muted mt-5 mb-3">📖 Payment History</h5>
             <?php if (count($paid)): ?>
                 <div class="table-responsive">
@@ -164,14 +157,16 @@ if ($supplier_id) {
                         </thead>
                         <tbody>
                         <?php foreach ($paid as $i => $p):
-                            $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $p['quantity'];
-                            $total = $p['price'] * $p['quantity'] - $discount;
+                            $qty = $p['payment_due_quantity'] ?? $p['quantity'];
+
+                            $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $qty;
+                            $total = $p['price'] * $qty - $discount;
                             ?>
                             <tr>
                                 <td><?= $i + 1 ?></td>
                                 <td><?= htmlspecialchars($p['name']) ?></td>
                                 <td><?= $p['barcode'] ?></td>
-                                <td><?= $p['quantity'] ?></td>
+                                <td><?= $qty ?></td>
                                 <td>₨<?= number_format($p['price'], 2) ?></td>
                                 <td><?= $p['discount_percent'] ?? 0 ?>%</td>
                                 <td><strong>₨<?= number_format($total, 2) ?></strong></td>
@@ -185,7 +180,7 @@ if ($supplier_id) {
                 <div class="alert alert-secondary">No payments recorded yet.</div>
             <?php endif; ?>
 
-            <!-- Actions -->
+            <!-- Buttons -->
             <div class="mt-4 d-flex gap-3">
                 <button onclick="window.print()" class="btn btn-outline-dark">🖨 Print Invoice</button>
                 <a href="export_supplier_payments.php?supplier_id=<?= $supplier_id ?>" class="btn btn-outline-primary">⬇ Export CSV</a>

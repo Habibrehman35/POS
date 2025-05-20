@@ -1,0 +1,36 @@
+from this url you can downlaod Barcode generator software 
+https://getcomposer.org/Composer-Setup.exe
+
+cd C:\xampp\htdocs\pos-system ---- go to this path and run CMD
+
+Run the Composer Command
+
+composer require picqer/php-barcode-generator
+
+
+✅ Solution: Enable GD Library in XAMPP (Windows)
+🔧 Step-by-Step Fix
+
+    Open your php.ini file
+    You’ll find it in:
+
+E:\xampp001\php\php.ini
+
+Search for this line:
+
+;extension=gd
+
+Uncomment it (remove the ;):
+
+extension=gd
+
+Save the file.
+
+Restart Apache via XAMPP Control Panel
+
+✅ Solution Options
+🥇 Option 1: Install FPDF via Composer (Recommended)
+
+In your project folder (E:\xampp001\htdocs\pos-system), run:
+
+composer require setasign/fpdf

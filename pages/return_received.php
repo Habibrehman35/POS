@@ -32,10 +32,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_received'])) {
                 SET received_qty = ?, received_at = NOW(), resolved = ? 
                 WHERE id = ?")->execute([$total_received, $resolved, $return_id]);
 
-            // Update product stock
-            $pdo->prepare("UPDATE products 
-                SET quantity = quantity + ? 
-                WHERE id = (SELECT product_id FROM product_returns WHERE id = ?)")->execute([$received_qty, $return_id]);
+           // Update product stock AND payment_due_quantity
+$pdo->prepare("UPDATE products 
+    SET 
+        quantity = quantity + ?, 
+        payment_due_quantity = payment_due_quantity + ? 
+    WHERE id = (SELECT product_id FROM product_returns WHERE id = ?)")
+    ->execute([$received_qty, $received_qty, $return_id]);
+
 
             $success = "✅ Return updated successfully.";
         }

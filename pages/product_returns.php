@@ -30,7 +30,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_return'])) {
             $stmt = $pdo->prepare("INSERT INTO product_returns (product_id, return_qty, received_qty, resolved, reason, return_date) VALUES (?, ?, 0, 0, ?, ?)");
             $stmt->execute([$product_id, $return_qty, $reason, $return_date]);
 
-            $pdo->prepare("UPDATE products SET quantity = quantity - ? WHERE id = ?")->execute([$return_qty, $product_id]);
+          $pdo->prepare("UPDATE products 
+  SET quantity = quantity - ?, 
+      payment_due_quantity = payment_due_quantity - ? 
+  WHERE id = ?")->execute([
+      $return_qty, $return_qty, $product_id
+]);
+
 
             $success = "✅ Product return submitted and stock updated.";
         }

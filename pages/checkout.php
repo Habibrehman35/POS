@@ -11,7 +11,6 @@ $cart = $_SESSION['cart'];
 $payment_mode = $_POST['payment_mode'];
 $total_amount = 0;
 
-// Calculate total
 foreach ($cart as $item) {
     $total_amount += $item['price'] * $item['quantity'];
 }
@@ -38,24 +37,14 @@ try {
         ]);
         $updateStock->execute([$item['quantity'], $item['id']]);
     }
-      // Update stock: reduce the quantity of products in the database
-      foreach ($cart as $item) {
-        $stmt = $pdo->prepare("UPDATE products SET quantity = quantity - ? WHERE id = ?");
-        $stmt->execute([$item['quantity'], $item['id']]);
-    }
 
-    // Commit transaction
     $pdo->commit();
-    
-    // Clear cart
     $_SESSION['cart'] = [];
 
-    // Redirect to print invoice page
     header("Location: print_invoice.php?sale_id=$sale_id");
     exit;
 
 } catch (Exception $e) {
-    // Rollback transaction in case of error
     $pdo->rollBack();
     die("Checkout failed: " . $e->getMessage());
 }
