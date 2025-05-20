@@ -61,3 +61,23 @@ This is a full-featured POS (Point of Sale) system built with **PHP**, **MySQL**
 1. **Clone the repository**
    ```bash
    https://github.com/Habibrehman35/POS.git
+
+   🔐 Login Credentials (Default)
+
+    Admin
+
+        Username: admin
+
+        Password: admin123
+
+    Cashier
+
+        Username: shakir
+
+        Password: 12345s
+
+📫 Contact
+
+For feedback, issues, or feature requests, feel free to reach me:
+
+📧 hassebideas35@gmail.com
