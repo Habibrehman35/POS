@@ -10,7 +10,17 @@ if (!isset($_SESSION['user_id'])) {
 $success = '';
 $error = '';
 
-// Handle new return submission
+function insertJournalEntry($pdo, $date, $account, $desc, $debit, $credit, $refType, $refId) {
+    $stmt = $pdo->prepare("INSERT INTO general_journal 
+        (entry_date, account, description, debit, credit, reference_type, reference_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$date, $account, $desc, $debit, $credit, $refType, $refId]);
+}
+
+
+
+$entries = $pdo->query("SELECT * FROM general_journal ORDER BY entry_date DESC")->fetchAll();
+// 🟢 Handle new return submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_return'])) {
     $product_id = $_POST['product_id'];
     $return_qty = (int)($_POST['return_qty'] ?? 0);
@@ -18,36 +28,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_return'])) {
     $return_date = $_POST['return_date'] ?? '';
 
     if ($product_id && $return_qty > 0) {
-        $stmt = $pdo->prepare("SELECT quantity FROM products WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT name, quantity, supplier_name, cost_price FROM products WHERE id = ?");
         $stmt->execute([$product_id]);
-        $current_qty = $stmt->fetchColumn();
+        $product = $stmt->fetch();
 
-        if ($current_qty === false) {
+        if (!$product) {
             $error = "❌ Product not found.";
-        } elseif ($return_qty > $current_qty) {
+        } elseif ($return_qty > $product['quantity']) {
             $error = "❌ Return quantity exceeds available stock.";
         } else {
-            $stmt = $pdo->prepare("INSERT INTO product_returns (product_id, return_qty, received_qty, resolved, reason, return_date) VALUES (?, ?, 0, 0, ?, ?)");
+            // Insert into product_returns
+            $stmt = $pdo->prepare("INSERT INTO product_returns 
+                (product_id, return_qty, received_qty, resolved, reason, return_date) 
+                VALUES (?, ?, 0, 0, ?, ?)");
             $stmt->execute([$product_id, $return_qty, $reason, $return_date]);
 
-          $pdo->prepare("UPDATE products 
-  SET quantity = quantity - ?, 
-      payment_due_quantity = payment_due_quantity - ? 
-  WHERE id = ?")->execute([
-      $return_qty, $return_qty, $product_id
-]);
+            // Update stock and due quantity
+            $pdo->prepare("UPDATE products 
+                SET quantity = quantity - ?, 
+                    payment_due_quantity = payment_due_quantity - ? 
+                WHERE id = ?")->execute([$return_qty, $return_qty, $product_id]);
 
+            // ✅ Insert into general journal
+            $amount = $return_qty * $product['cost_price'];
+            $desc = "Product return - " . $product['name'];
 
-            $success = "✅ Product return submitted and stock updated.";
+            insertJournalEntry($pdo, $return_date, "Purchase Returns", $desc, $amount, 0, "Product Return", $product_id);
+            insertJournalEntry($pdo, $return_date, "Inventory", $desc, 0, $amount, "Product Return", $product_id);
+
+            $success = "✅ Product return submitted, stock updated, and journal entry recorded.";
         }
     } else {
         $error = "❌ Please fill all required fields.";
     }
 }
 
+// Load product list
 $products = $pdo->query("SELECT id, name, supplier_name, quantity FROM products ORDER BY name")->fetchAll();
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>

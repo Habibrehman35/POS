@@ -217,10 +217,13 @@ body.dark-mode .footer a {
         <i class="bi bi-caret-down-fill"></i>
     </a>
     <div class="collapse ps-3 pt-2" id="productMenu">
-        <a href="products.php" class="text-white d-block mb-2"><i class="bi bi-card-list"></i> List Products</a>
         <a href="add_product.php" class="text-white d-block mb-2"><i class="bi bi-plus-circle"></i> Add Product</a>
+        <a href="products.php" class="text-white d-block mb-2"><i class="bi bi-card-list"></i> List Products</a>
+       <a href="expiry_report.php" class="text-white d-block mb-2"><i class="bi bi-card-list"></i> Expired Items</a>
+        
         <a href="product_returns.php" class="text-white d-block mb-2"><i class="bi bi-arrow-return-left"></i> Return Defective</a>
         <a href="return_received.php" class="text-white d-block mb-2"><i class="bi bi-box-arrow-in-down-left"></i> Return Received</a>
+        
     </div>
 </div>
 
@@ -250,19 +253,41 @@ body.dark-mode .footer a {
 </div>
 
 
-<div class="mb-2">
-  <a class="text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#reportMenu">
-        
-  <span><i class="bi bi-graph-up"></i> Report</span>
 
+<div class="mb-2">
+    <a class="text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#expenseMenu">
+        <span><i class="bi bi-wallet2"></i> Expenses</span>
         <i class="bi bi-caret-down-fill"></i>
-            </a>
-              <div class="collapse ps-3 pt-2" id="reportMenu">
-        <a href="expiry_report.php" class="text-white d-block mb-2"><i class="bi bi-item-plus"></i> Expired Items</a>
-        <a href="users.php" class="text-white d-block mb-2"><i class="bi bi-people-fill"></i> User List</a>
+    </a>
+    <div class="collapse ps-3 pt-2" id="expenseMenu">
+        <a href="add_expense.php" class="text-white d-block mb-2"><i class="bi bi-plus-circle"></i> Add Expense</a>
+        <a href="expenses_list.php" class="text-white d-block mb-2"><i class="bi bi-card-list"></i> Expense History</a>
     </div>
-  
-  </div>     
+</div>
+
+
+<!-- Finance Reports -->
+<div class="mb-2">
+    <a class="text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#financeMenu">
+        <span><i class="bi bi-file-earmark-bar-graph"></i> Finance Reports</span>
+        <i class="bi bi-caret-down-fill"></i>
+    </a>
+    <div class="collapse ps-3 pt-2" id="financeMenu">
+        <a href="ledger.php" class="text-white d-block mb-2">
+            <i class="bi bi-journal-text"></i> Ledger
+        </a>
+        <a href="trial_balance.php" class="text-white d-block mb-2">
+            <i class="bi bi-list-columns-reverse"></i> Trial Balance
+        </a>
+        <a href="balance_sheet.php" class="text-white d-block mb-2">
+            <i class="bi bi-building"></i> Balance Sheet
+        </a>
+        <a href="add_journal_entry.php" class="text-white d-block mb-2"><i class="bi bi-journal-plus"></i> Add Journal Entry</a>
+<a href="view_journal.php" class="text-white d-block mb-2"><i class="bi bi-journal-text"></i> View Journal</a>
+
+    </div>
+</div>
+     
   
   
         <!--  <a href="logout.php" class="text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a> -->

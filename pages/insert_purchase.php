@@ -1,5 +1,15 @@
 <?php
 require '../config.php';
+session_start();
+
+// ✅ Journal Entry Function
+function insertJournalEntry($pdo, $date, $account, $desc, $debit, $credit, $refType, $refId) {
+    $stmt = $pdo->prepare("INSERT INTO general_journal 
+        (entry_date, account, description, debit, credit, reference_type, reference_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$date, $account, $desc, $debit, $credit, $refType, $refId]);
+}
+
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $supplierName = $_POST['supplier'] ?? '';
@@ -9,8 +19,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $description = $_POST['description'] ?? '';
     $subtotal = $_POST['subtotal'] ?? '';
     $purchaseid = $_POST['purchaseid'] ?? '';
-    $cost_price = $_POST['cost_price'];
-
     $date = date("Y-m-d H:i:s");
 
     // Find supplier_id from name
@@ -31,9 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $barcode = $_POST['barcode'][$i];
         $price = $_POST['price'][$i];
         $qty = $_POST['quantity'][$i];
-      $cost_price = $_POST['cost_price'][$i] ?? 0;
-
-
+        $cost_price = $_POST['cost_price'][$i] ?? 0;
         $discount = $_POST['discount'][$i];
         $tax = $_POST['tax'][$i];
         $expiry = $_POST['expiry'][$i];
@@ -52,24 +58,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Insert product
-$stmt = $pdo->prepare("INSERT INTO products (
-  name, barcode, price, cost_price, quantity, payment_due_quantity,
-  discount_percent, tax_percent, expiry_date, image,
-  supplier_id, supplier_name, supplier_address, supplier_contact, is_paid, created_at
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())");
+        $stmt = $pdo->prepare("INSERT INTO products (
+            name, barcode, price, cost_price, quantity, payment_due_quantity,
+            discount_percent, tax_percent, expiry_date, image,
+            supplier_id, supplier_name, supplier_address, supplier_contact, is_paid, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, NOW())");
 
-$stmt->execute([
-  $name, $barcode, $price, $cost_price, $qty, $qty, // 🟢 quantity, 🟢 payment_due_quantity
-  $discount, $tax, $expiry, $image,
-  $supplier_id, $supplierName, $address, $contact
-]);
-
-
-
+        $stmt->execute([
+            $name, $barcode, $price, $cost_price, $qty, $qty,
+            $discount, $tax, $expiry, $image,
+            $supplier_id, $supplierName, $address, $contact
+        ]);
 
         $lastProductId = $pdo->lastInsertId();
 
-        // Check if this row had print_barcode checked
+        // ✅ Insert automatic general journal entry
+        $totalAmount = $cost_price * $qty;
+        insertJournalEntry($pdo, date('Y-m-d'), 'Inventory', "Purchase of $name", $totalAmount, 0, 'Purchase', $lastProductId);
+        insertJournalEntry($pdo, date('Y-m-d'), 'Accounts Payable', "Payable to $supplierName", 0, $totalAmount, 'Purchase', $lastProductId);
+
+        // Print barcode condition
         if (isset($_POST['print_barcode'][$i]) && $_POST['print_barcode'][$i] == '1') {
             $printProductIds[] = $lastProductId;
         }

@@ -56,7 +56,7 @@ $new_id = "PR" . str_pad($lastId + 1, 3, "0", STR_PAD_LEFT);
     <table class="table table-bordered text-center" id="product_table">
         <thead class="table-dark">
         <tr>
-            <th>Image</th><th>Name</th><th>Barcode</th><th>Price</th> <th>Cost Price</th>
+            <th>Image</th><th>Name</th><th>Barcode</th><th>Selling Price</th> <th>Cost Price</th>
             <th>Qty</th><th>Discount</th><th>Tax</th><th>Expiry</th><th>P.Code</th><th>Remove</th>
         </tr>
         </thead>

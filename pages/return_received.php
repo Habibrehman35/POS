@@ -10,6 +10,16 @@ if (!isset($_SESSION['user_id'])) {
 $success = '';
 $error = '';
 
+
+function insertJournalEntry($pdo, $date, $account, $desc, $debit, $credit, $refType, $refId) {
+    $stmt = $pdo->prepare("INSERT INTO general_journal 
+        (entry_date, account, description, debit, credit, reference_type, reference_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$date, $account, $desc, $debit, $credit, $refType, $refId]);
+}
+
+
+
 // Handle Quantity Received Update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_received'])) {
     $return_id = $_POST['return_id'];
@@ -40,11 +50,35 @@ $pdo->prepare("UPDATE products
     WHERE id = (SELECT product_id FROM product_returns WHERE id = ?)")
     ->execute([$received_qty, $received_qty, $return_id]);
 
+    // Get product details for journal entry
+$productStmt = $pdo->prepare("
+    SELECT p.name, p.cost_price 
+    FROM products p
+    JOIN product_returns r ON r.product_id = p.id
+    WHERE r.id = ?
+");
+$productStmt->execute([$return_id]);
+$product = $productStmt->fetch();
+
+if ($product) {
+    $amount = $received_qty * $product['cost_price'];
+    $desc = "Received returned product - " . $product['name'];
+
+    // Add to general_journal
+    insertJournalEntry($pdo, date('Y-m-d'), "Inventory", $desc, $amount, 0, "Return Received", $return_id);
+    insertJournalEntry($pdo, date('Y-m-d'), "Purchase Returns", $desc, 0, $amount, "Return Received", $return_id);
+}
+
+
 
             $success = "✅ Return updated successfully.";
         }
     }
 }
+
+
+
+
 
 // Filters
 $search = $_GET['search'] ?? '';

@@ -7,8 +7,17 @@ if (!isset($_SESSION['user_id'])) {
     header("Location: login.php");
     exit;
 }
-
 $success = $error = '';
+
+// ✅ Place function here
+function insertJournalEntry($pdo, $date, $account, $desc, $debit, $credit, $refType, $refId) {
+    $stmt = $pdo->prepare("INSERT INTO ledger_entries 
+        (date, account, description, debit, credit, reference_type, reference_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$date, $account, $desc, $debit, $credit, $refType, $refId]);
+}
+
+
 
 // Handle supplier return form
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_return'])) {

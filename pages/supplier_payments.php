@@ -1,49 +1,103 @@
 <?php
-// File: supplier_payments.php
-session_start();
 require '../config.php';
+session_start();
 
 if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
     exit;
 }
 
+// ✅ Journal Entry Helper
+function insertJournalEntry($pdo, $date, $account, $desc, $debit, $credit, $refType, $refId) {
+    $stmt = $pdo->prepare("INSERT INTO general_journal 
+        (entry_date, account, description, debit, credit, reference_type, reference_id) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->execute([$date, $account, $desc, $debit, $credit, $refType, $refId]);
+}
+
 $suppliers = $pdo->query("SELECT id, name FROM suppliers ORDER BY name")->fetchAll();
 $supplier_id = $_GET['supplier_id'] ?? null;
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['mark_paid'])) {
-    $purchase_id = $_POST['purchase_id'];
-    $stmt = $pdo->prepare("UPDATE products SET is_paid = 1, paid_at = NOW() WHERE id = ?");
-    $stmt->execute([$purchase_id]);
-    header("Location: supplier_payments.php?supplier_id=" . $supplier_id);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['pay_supplier'])) {
+    $product_id = $_POST['product_id'];
+    $payment_amount = $_POST['payment_amount'];
+    $payment_method = $_POST['payment_method'];
+    $note = $_POST['note'] ?? '';
+    $date = date('Y-m-d');
+
+    // Insert transaction
+    $stmt = $pdo->prepare("INSERT INTO supplier_payment_transactions (product_id, amount_paid, payment_method, note, paid_at) VALUES (?, ?, ?, ?, ?)");
+    $stmt->execute([$product_id, $payment_amount, $payment_method, $note, $date]);
+
+    // Check if now fully paid
+    $stmt = $pdo->prepare("SELECT SUM(amount_paid) FROM supplier_payment_transactions WHERE product_id = ?");
+    $stmt->execute([$product_id]);
+    $total_paid = $stmt->fetchColumn();
+
+    $stmt = $pdo->prepare("SELECT price, payment_due_quantity FROM products WHERE id = ?");
+    $stmt->execute([$product_id]);
+    $product = $stmt->fetch();
+
+    $due_total = $product['price'] * $product['payment_due_quantity'];
+
+    if ($total_paid >= $due_total) {
+        $pdo->prepare("UPDATE products SET is_paid = 1, paid_at = NOW() WHERE id = ?")->execute([$product_id]);
+    }
+
+    // Insert journal
+    $desc = "Supplier Payment for Product ID #$product_id";
+    insertJournalEntry($pdo, $date, "Accounts Payable", $desc, $payment_amount, 0, "Supplier Payment", $product_id);
+    insertJournalEntry($pdo, $date, $payment_method, $desc, 0, $payment_amount, "Supplier Payment", $product_id);
+
+    header("Location: supplier_payments.php?supplier_id=$supplier_id");
     exit;
 }
 
+// Fetch product-based balances
 $pending = $paid = [];
 $pending_total = $paid_total = 0;
 
 if ($supplier_id) {
-    $stmt = $pdo->prepare("SELECT * FROM products WHERE supplier_id = ? AND is_paid = 0 ORDER BY created_at DESC");
+    $stmt = $pdo->prepare("SELECT * FROM products WHERE supplier_id = ? ORDER BY created_at DESC");
     $stmt->execute([$supplier_id]);
-    $pending = $stmt->fetchAll();
+    $all = $stmt->fetchAll();
 
-    $stmt = $pdo->prepare("SELECT * FROM products WHERE supplier_id = ? AND is_paid = 1 ORDER BY paid_at DESC");
-    $stmt->execute([$supplier_id]);
-    $paid = $stmt->fetchAll();
-
-    foreach ($pending as $p) {
+    foreach ($all as $p) {
         $qty = $p['payment_due_quantity'] ?? $p['quantity'];
-
         $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $qty;
-        $pending_total += $p['price'] * $qty - $discount;
+        $total = $p['price'] * $qty - $discount;
+
+        $stmt = $pdo->prepare("SELECT SUM(amount_paid) FROM supplier_payment_transactions WHERE product_id = ?");
+        $stmt->execute([$p['id']]);
+        $paid_amount = $stmt->fetchColumn() ?? 0;
+
+        $p['total'] = $total;
+        $p['paid'] = $paid_amount;
+        $p['remaining'] = max(0, $total - $paid_amount);
+
+      $paid_total += $paid_amount;
+
+if ($p['is_paid']) {
+    $paid[] = $p; // Fully paid records
+} else {
+    $pending[] = $p; // Still pending
+    $pending_total += $p['remaining'];
+}
+
     }
 
-    foreach ($paid as $p) {
-        $qty = $p['payment_due_quantity'] ?? $p['quantity'];
-
-        $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $qty;
-        $paid_total += $p['price'] * $qty - $discount;
-    }
+    // ✅ Fetch payment history
+    $stmt = $pdo->prepare("
+        SELECT t.*, p.name 
+        FROM supplier_payment_transactions t
+        JOIN products p ON t.product_id = p.id
+        WHERE p.supplier_id = ?
+        ORDER BY t.paid_at DESC
+    ");
+    $stmt->execute([$supplier_id]);
+    $payment_history = $stmt->fetchAll();
+} else {
+    $payment_history = [];
 }
 ?>
 <!DOCTYPE html>
@@ -51,142 +105,98 @@ if ($supplier_id) {
 <head>
     <title>Supplier Payments</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f5f8fa; }
-        .card { border: none; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.05); }
-        h3, h5 { font-weight: 600; }
-        .summary-box { padding: 15px 25px; border-radius: 10px; }
-        .table th, .table td { vertical-align: middle !important; }
-    </style>
 </head>
 <body class="p-4">
-<div class="container">
-    <div class="card p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="text-primary">💵 Supplier Payment Management</h3>
-            <a href="dashboard.php" class="btn btn-outline-secondary">← Back</a>
+<div class="container bg-white p-4 shadow-sm rounded">
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h3 class="text-primary mb-0">💵 Supplier Payment Management</h3>
+    <a href="dashboard.php" class="btn btn-outline-secondary">← Back</a>
+</div>
+
+
+    <!-- Dropdown -->
+    <form method="GET" class="mb-4">
+        <select name="supplier_id" class="form-select" onchange="this.form.submit()" required>
+            <option value="">-- Select Supplier --</option>
+            <?php foreach ($suppliers as $s): ?>
+                <option value="<?= $s['id'] ?>" <?= $supplier_id == $s['id'] ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($s['name']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </form>
+
+    <?php if ($supplier_id): ?>
+        <!-- Summary -->
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="alert alert-success"><b>Paid:</b> ₨<?= number_format($paid_total, 2) ?></div>
+            </div>
+            <div class="col-md-4">
+                <div class="alert alert-warning"><b>Pending:</b> ₨<?= number_format($pending_total, 2) ?></div>
+            </div>
         </div>
 
-        <!-- Supplier Dropdown -->
-        <form method="GET" class="mb-4">
-            <select name="supplier_id" class="form-select shadow-sm" onchange="this.form.submit()" required>
-                <option value="">-- Select Supplier --</option>
-                <?php foreach ($suppliers as $sup): ?>
-                    <option value="<?= $sup['id'] ?>" <?= $sup['id'] == $supplier_id ? 'selected' : '' ?>>
-                        <?= htmlspecialchars($sup['name']) ?>
-                    </option>
+        <!-- Pending Table -->
+        <h5>📌 Pending Payments</h5>
+        <?php if (count($pending)): ?>
+            <table class="table table-bordered align-middle">
+                <thead class="table-warning">
+                <tr><th>#</th><th>Name</th><th>Qty</th><th>Total</th><th>Paid</th><th>Remaining</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                <?php foreach ($pending as $i => $p): ?>
+                    <tr>
+                        <td><?= $i + 1 ?></td>
+                        <td><?= htmlspecialchars($p['name']) ?></td>
+                        <td><?= $p['payment_due_quantity'] ?></td>
+                        <td>₨<?= number_format($p['total'], 2) ?></td>
+                        <td>₨<?= number_format($p['paid'], 2) ?></td>
+                        <td>₨<?= number_format($p['remaining'], 2) ?></td>
+                        <td>
+                            <form method="POST" class="d-flex gap-2">
+                                <input type="hidden" name="product_id" value="<?= $p['id'] ?>">
+                                <input type="number" name="payment_amount" value="<?= $p['remaining'] ?>" class="form-control form-control-sm" step="0.01" required>
+                                <select name="payment_method" class="form-select form-select-sm" required>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Bank Transfer">Bank Transfer</option>
+                                </select>
+                                <input type="text" name="note" class="form-control form-control-sm" placeholder="Note (optional)">
+                                <button class="btn btn-sm btn-success" name="pay_supplier">✔ Pay</button>
+                            </form>
+                        </td>
+                    </tr>
                 <?php endforeach; ?>
-            </select>
-        </form>
-
-        <?php if ($supplier_id): ?>
-            <!-- Summary Boxes -->
-            <div class="row g-3 mb-4">
-                <div class="col-md-4">
-                    <div class="bg-light summary-box border-start border-success border-4 shadow-sm">
-                        <h6 class="text-muted mb-1">Total Paid</h6>
-                        <h5 class="text-success">₨<?= number_format($paid_total, 2) ?></h5>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="bg-light summary-box border-start border-danger border-4 shadow-sm">
-                        <h6 class="text-muted mb-1">Pending Payment</h6>
-                        <h5 class="text-danger">₨<?= number_format($pending_total, 2) ?></h5>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="bg-light summary-box border-start border-dark border-4 shadow-sm">
-                        <h6 class="text-muted mb-1">Total (All Time)</h6>
-                        <h5 class="text-dark fw-bold">₨<?= number_format($paid_total + $pending_total, 2) ?></h5>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pending Payments Table -->
-            <h5 class="text-danger mb-3">📌 Pending Bills</h5>
-            <?php if (count($pending)): ?>
-                <div class="table-responsive">
-                    <table class="table table-bordered align-middle">
-                        <thead class="table-danger">
-                        <tr>
-                            <th>#</th><th>Name</th><th>Barcode</th><th>Qty</th>
-                            <th>Price</th><th>Discount</th><th>Total</th><th>Date</th><th>Action</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <?php foreach ($pending as $i => $p):
-                            $qty = $p['payment_due_quantity'] ?? $p['quantity'];
-
-                            $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $qty;
-                            $total = $p['price'] * $qty - $discount;
-                            ?>
-                            <tr>
-                                <td><?= $i + 1 ?></td>
-                                <td><?= htmlspecialchars($p['name']) ?></td>
-                                <td><?= $p['barcode'] ?></td>
-                                <td><?= $qty ?></td>
-                                <td>₨<?= number_format($p['price'], 2) ?></td>
-                                <td><?= $p['discount_percent'] ?? 0 ?>%</td>
-                                <td><strong>₨<?= number_format($total, 2) ?></strong></td>
-                                <td><?= date('d-M-Y', strtotime($p['created_at'])) ?></td>
-                                <td>
-                                    <form method="POST" class="d-inline">
-                                        <input type="hidden" name="purchase_id" value="<?= $p['id'] ?>">
-                                        <button type="submit" name="mark_paid" class="btn btn-sm btn-success">Mark as Paid</button>
-                                    </form>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php else: ?>
-                <div class="alert alert-success">✅ No pending payments.</div>
-            <?php endif; ?>
-
-            <!-- Paid History Table -->
-            <h5 class="text-muted mt-5 mb-3">📖 Payment History</h5>
-            <?php if (count($paid)): ?>
-                <div class="table-responsive">
-                    <table class="table table-bordered table-striped align-middle">
-                        <thead class="table-secondary">
-                        <tr>
-                            <th>#</th><th>Name</th><th>Barcode</th><th>Qty</th>
-                            <th>Price</th><th>Discount</th><th>Paid</th><th>Paid Date</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <?php foreach ($paid as $i => $p):
-                            $qty = $p['payment_due_quantity'] ?? $p['quantity'];
-
-                            $discount = ($p['discount_percent'] ?? 0) / 100 * $p['price'] * $qty;
-                            $total = $p['price'] * $qty - $discount;
-                            ?>
-                            <tr>
-                                <td><?= $i + 1 ?></td>
-                                <td><?= htmlspecialchars($p['name']) ?></td>
-                                <td><?= $p['barcode'] ?></td>
-                                <td><?= $qty ?></td>
-                                <td>₨<?= number_format($p['price'], 2) ?></td>
-                                <td><?= $p['discount_percent'] ?? 0 ?>%</td>
-                                <td><strong>₨<?= number_format($total, 2) ?></strong></td>
-                                <td><?= date('d-M-Y', strtotime($p['paid_at'])) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            <?php else: ?>
-                <div class="alert alert-secondary">No payments recorded yet.</div>
-            <?php endif; ?>
-
-            <!-- Buttons -->
-            <div class="mt-4 d-flex gap-3">
-                <button onclick="window.print()" class="btn btn-outline-dark">🖨 Print Invoice</button>
-                <a href="export_supplier_payments.php?supplier_id=<?= $supplier_id ?>" class="btn btn-outline-primary">⬇ Export CSV</a>
-            </div>
+                </tbody>
+            </table>
+        <?php else: ?>
+            <p class="text-success">✅ No pending bills.</p>
         <?php endif; ?>
-    </div>
+
+        <!-- Payment History -->
+        <h5 class="mt-5">📖 Payment History</h5>
+        <?php if (count($payment_history)): ?>
+            <table class="table table-bordered table-striped align-middle">
+                <thead class="table-secondary">
+                <tr><th>#</th><th>Product</th><th>Amount</th><th>Method</th><th>Note</th><th>Date</th></tr>
+                </thead>
+                <tbody>
+                <?php foreach ($payment_history as $i => $row): ?>
+                    <tr>
+                        <td><?= $i + 1 ?></td>
+                        <td><?= htmlspecialchars($row['name']) ?></td>
+                        <td>₨<?= number_format($row['amount_paid'], 2) ?></td>
+                        <td><?= htmlspecialchars($row['payment_method']) ?></td>
+                        <td><?= htmlspecialchars($row['note']) ?></td>
+                        <td><?= date('d-M-Y', strtotime($row['paid_at'])) ?></td>
+                    </tr>
+                <?php endforeach; ?>
+                </tbody>
+            </table>
+        <?php else: ?>
+            <p class="text-muted">No transactions yet.</p>
+        <?php endif; ?>
+    <?php endif; ?>
 </div>
 </body>
 </html>

@@ -5,19 +5,31 @@ require '../config.php';
 if (!isset($_GET['sale_id']) || !is_numeric($_GET['sale_id'])) {
     die("Sale ID missing");
 }
+
 $sale_id = (int) $_GET['sale_id'];
+
+
 
 
 // Fetch sale info
 $stmtSale = $pdo->prepare("SELECT s.*, u.full_name FROM sales s JOIN users u ON s.user_id = u.id WHERE s.id = ?");
 $stmtSale->execute([$sale_id]);
 $sale = $stmtSale->fetch();
+if (!$sale) {
+    die("❌ No sale found for ID: $sale_id");
+}
 
 // Fetch sale items (join to products for tax/discount/image)
 $stmtItems = $pdo->prepare("SELECT si.*, p.name, p.tax_percent, p.discount_percent FROM sale_items si 
                             JOIN products p ON si.product_id = p.id WHERE si.sale_id = ?");
 $stmtItems->execute([$sale_id]);
 $items = $stmtItems->fetchAll();
+
+if (empty($items)) {
+    echo "<div class='alert alert-warning'>⚠️ No items found for this sale.</div>";
+}
+
+
 ?>
 <!DOCTYPE html>
 <html>
